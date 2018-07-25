@@ -113,28 +113,36 @@ class Grabber:
 
 		textarea.clear()
 
-		q = """
-			SELECT [accounts.customer_phones.age_bucket] AS age_group, 
-					[accounts.customer_phones.carrier] AS carrier, 
-					[accounts.customer_phones.category] AS category, 
-					[accounts.customer_phones.country] AS country, 
-					[accounts.customer_phones.first_seen] AS first_seen, 
-					[accounts.customer_phones.gender] AS gender,
-					[accounts.customer_phones.is_opted_in] AS is_opted_in, 
-					[accounts.customer_phones.language] AS language, 
-					[accounts.customer_phones.model] AS model, 
-					[accounts.customer_phones.number_of_devices] AS number_of_devices, 
-					[accounts.customer_phones.registration_date] AS registration_date,
-					[accounts.customer_phones.samsung_account_id] AS account_id,
-					[accounts.customer_phones.series] AS series
-			FROM [accounts.customer_phones] 
-					WHERE (country = 'AUS') AND (age_group = '36-45') AND (DATE(first_seen) < DATE('2012-01-01'))
+		a_ = 'samsung_accounts.customer_phones'
+
+		q = f"""
+			SELECT [{a_}.age_bucket] AS age_group, 
+					[{a_}.carrier] AS carrier, 
+					[{a_}.category] AS category, 
+					[{a_}.country] AS country, 
+					[{a_}.first_seen] AS first_seen, 
+					[{a_}.gender] AS gender,
+					[{a_}.is_opted_in] AS is_opted_in, 
+					[{a_}.language] AS language, 
+					[{a_}.model] AS model, 
+					[{a_}.number_of_devices] AS number_of_devices, 
+					[{a_}.registration_date] AS registration_date,
+					[{a_}.samsung_account_id] AS account_id,
+					[{a_}.series] AS series
+			FROM [{a_}] 
+					WHERE (country = 'AUS') AND (age_bucket = '36-45') AND (DATE(first_seen) > DATE('2012-01-01')) AND (DATE(first_seen) < DATE('2012-02-01'))
 			"""
 
 		textarea.send_keys(q)
 
 		get_answer_button = self.driver.find_element_by_css_selector('button.RunButton')
 		self.click_and_wait(get_answer_button, secs=10)
+
+		download_full_results = self.driver.find_element_by_css_selector('svg.Icon-downarrow')
+		self.click_and_wait(download_full_results)
+
+		choose_csv = self.driver.find_element_by_xpath('/html/body/span[11]/span/div/div/div/form[1]/button')
+		self.click_and_wait(choose_csv)
 
 		return self
 
