@@ -7,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
 import calendar
-
+import arrow
 import time
 
 import json
@@ -26,6 +26,12 @@ class Grabber:
 
 		element.click()
 		time.sleep(secs)
+
+	def _find_by_text(self, tag_, class_, text_):
+
+		for _ in self.driver.find_elements_by_css_selector(f'{tag_}.{class_}'):
+			if _.text.strip().lower() == text_:
+				return _
 
 	def sign_in(self):
 
@@ -69,190 +75,103 @@ class Grabber:
 
 		return self
 
+	def _choose_database(self, db_name):
+		"""
+		click on the popover and choose database on the New question page
+		"""
 
-	def navigate_to_table(self):
+		select_database = self._find_by_text('span', 'text-grey-4', 'select a database')
+		self.click_and_wait(select_database, secs=3)
 
-		print('starting new question...')
+		database_name = self._find_by_text('h4', 'List-item-title', db_name)
+		self.click_and_wait(database_name, secs=3)
 
-		new_question = self.driver.find_element_by_css_selector('a.NavNewQuestion')
-		self.click_and_wait(new_question)
+		return self
 
-		native_query = self.driver.find_element_by_xpath('//*[@id="root"]/div/div/div/div/ol/li[2]/a/div[1]/img')
-		self.click_and_wait(native_query)
+	def _run_query(self, q):
+		"""
+		run a query using the editor window on the New question page
+		"""
 
-		for s in self.driver.find_elements_by_css_selector('span.text-grey-4'):
-			if s.text.lower().strip() == 'select a database':
-				self.click_and_wait(s)
-				break
-		
-		try:
-			self.driver.switch_to_alert()
-		except:
-			print('no alert')
-
-		try:
-			popover = self.driver.find_element_by_css_selector('span.PopoverContainer')
-			print('found popover ', popover)
-		except:
-			print('cant find popover!')
-
-		# try:
-		# 	kk = self.driver.find_elements_by_css_selector('h4.List-item-title')
-
-		# 	print(len(kk))
-
-		# 	for e in kk:
-		# 		print(e.text)
-		# except:
-		# 	print('found no h4 listitems')
-
-		for i_ in self.driver.find_elements_by_css_selector('h4.List-item-title'):
-			if i_.text.strip().lower() == 'gcdm':
-				print('found gcdm! clicking..')
-				self.click_and_wait(i_)
-				break
-
-		# select_gcdm = self.driver.find_element_by_xpath('//*[@id="DatabasePicker"]/div/div[3]/div/a/h4')
-		# self.click_and_wait(select_gcdm)
 		actions = ActionChains(self.driver)
 
-		textfield = self.driver.find_element_by_css_selector('div.ace_text-layer')
-
-		actions.move_to_element(textfield)
+		actions.move_to_element(self.driver.find_element_by_css_selector('div.ace_text-layer'))
 		actions.click()
-		# print('got textfield ', textfield)
-
-
-
-		# try:
-		# 	data_reference = self.driver.find_element_by_xpath('//span[contains(text(), "Data Reference")]')
-		# except:
-		# 	# note that this one is always there but may be invisible
-		# 	data_reference = self.driver.find_element_by_css_selector('svg.Icon-reference')
-
-		# self.click_and_wait(data_reference)
-
-		# purple_button = self.driver.find_element_by_class_name('Button--purple')
-		# self.click_and_wait(purple_button)
-
-		# accounts = self.driver.find_element_by_xpath('//a[@href="/reference/databases/3"]')
-
-		# self.click_and_wait(accounts)
-
-		# tables_in_samsung_accounts = self.driver.find_element_by_xpath('//a[@href="/reference/databases/3/tables"]')
-
-		# self.click_and_wait(tables_in_samsung_accounts)
-
-		# customer_phones = self.driver.find_element_by_xpath('//a[@href="/reference/databases/3/tables/10"]')
-		# self.click_and_wait(customer_phones)
-
-		# see_this_table = self.driver.find_element_by_css_selector('span.mr1.flex-no-shrink')
-		# self.click_and_wait(see_this_table, secs=8)
-
-		# view_sql_button = self.driver.find_element_by_css_selector('svg.Icon-sql')
-		# self.click_and_wait(view_sql_button)
-
-		# self.driver.switch_to.active_element
-
-		# convert_to_sql_button = self.driver.find_element_by_css_selector('a.Button--primary')
-		# self.click_and_wait(convert_to_sql_button, secs=8)
-
-		# textarea = self.driver.find_element_by_xpath('//*[@id="id_sql"]/textarea[@class="ace_text-input"]')
-
-		# print(f'found {textarea} text area!')
-
-		# self.driver.execute_script("arguments[0].scrollIntoView(true);", textarea)
-
-		# print('scrolled into view..')
-
-		# # textarea.clear()
-
-		# textarea.send_keys(Keys.CONTROL + "a");
-		# textarea.send_keys(Keys.DELETE)
-
-		# time.sleep(4)
-
-		#id_sql > textarea
-
-		a_ = 'samsung_accounts.customer_phones'
-
-		q = f"""
-			SELECT [{a_}.age_bucket] AS age_group, [{a_}.carrier] AS carrier, [{a_}.category] AS category, 
-					[{a_}.country] AS country, 
-					[{a_}.first_seen] AS first_seen, 
-					[{a_}.gender] AS gender,
-					[{a_}.language] AS language, [{a_}.model] AS model, 
-					[{a_}.number_of_devices] AS number_of_devices, 
-					[{a_}.registration_date] AS registration_date,
-					[{a_}.samsung_account_id] AS account_id, [{a_}.series] AS series
-			FROM {a_} 
-					WHERE (country = 'AUS') AND (age_bucket = '36-45') AND (DATE(first_seen) > DATE('2012-01-01')) AND (DATE(first_seen) < DATE('2012-02-01'))
-			"""
-
-		# textfield.send_keys(q)
-		
 		actions.send_keys(q)
 		actions.perform()
 
-		print('done action')
-
-		time.sleep(6)
-
-		print('trying to find get answer button..')
 		get_answer_button = self.driver.find_element_by_css_selector('button.RunButton')
 		self.click_and_wait(get_answer_button, secs=10)
 
+		row_count = 0
+
 		try:
-			row_count = self.driver.find_element_by_css_selector('div.ShownRowCount').text.strip()
-			print(row_count)
+			for _ in self.driver.find_element_by_css_selector('div.ShownRowCount').text.strip().split():
+				if _.replace(',','').isdigit():
+					row_count = int(_.replace(',',''))
+					break
 		except:
 			print('cannot find row count!')
+
+		print(f'got {row_count} rows')
 
 		download_full_results = self.driver.find_element_by_css_selector('svg.Icon-downarrow')
 		self.click_and_wait(download_full_results)
 
-		try:
-			popover_body = self.driver.find_element_by_css_selector('div.PopoverBody.PopoverBody--withArrow')
-		except:
-			print('cant find popover body!')
+		csv_option = self._find_by_text('button', 'Button', 'csv')
+		self.click_and_wait(csv_option)
 
-		print('looking for the download as CSV button...')
+		return self
 
-		for b in self.driver.find_elements_by_css_selector('button.Button'):
+	def run_question(self):
 
-			if b.text.strip().lower() == 'csv':
-				print('found it! clicking..')
-				self.click_and_wait(b)
-				break
+		# new_question = self._find_by_text('a', 'NavNewQuestion', 'new question')
+		# self.click_and_wait(new_question)
 
-		print('resetting actions...')
-		actions.reset_actions()
-		print('done')
-		
-		try:
-			ac = self.driver.find_element_by_css_selector('div.ace_content')
-			print('found ac!')
-			ac.clear()
-		except:
-			print('could not find and clear ac')
+		self.driver.get('https://metabase-test.seao-cdm.com/question/new')
 
-		try:
-			ac = self.driver.find_element_by_css_selector('textarea.ace_text-input')
-			# ac = self.driver.find_element_by_css_selector('div.ace_marker-layer')
-			print('textarea!')
-			print('trying to send keys to editor..')
-			ac.send_keys(Keys.CONTROL + 'a')
-			print('send ctrl + a')
-			ac.send_keys(Keys.DELETE)
-		except:
-			print('could not find and clear ac editor')
+		time.sleep(5)
 
+		native_query = self._find_by_text('h2', 'transition-all', 'native query')
+		self.click_and_wait(native_query)
 
+		self._choose_database('gcdm')
+
+		# [[1, 2, 3, 4, 5, 6, 7], 
+		#  [8, 9, 10, 11, 12, 13, 14], 
+		#  [15, 16, 17, 18, 19, 20, 21], 
+		#  [22, 23, 24, 25, 26, 27, 28], 
+		#  [29, 30, 31, 0, 0, 0, 0]]
+
+		yr = 2018
+		mnth = 1
+
+		for wk in calendar.monthcalendar(yr,mnth):
+			
+			d0, d1 = arrow.get(f'{yr}-{mnth}-{min(wk)}').shift(days=-1).format('YYYY-MM-DD'), \
+							arrow.get(f'{yr}-{mnth}-{max(wk)}').shift(days=+1).format('YYYY-MM-DD')
+
+			q = f"""
+					SELECT [gcdm.customers.id] AS [gcdm.customers.id], 
+						[gcdm.customers.city] AS [gcdm.customers.city], 
+						[gcdm.customers.country] AS [gcdm.customers.country], 
+						[gcdm.customers.date_of_birth] AS [gcdm.customers.date_of_birth], 
+						[gcdm.customers.gender] AS [gcdm.customers.gender], 
+						[gcdm.customers.language] AS [gcdm.customers.language], 
+						[gcdm.customers.last_ia_timestamp] AS [gcdm.customers.last_ia_timestamp], 
+						[gcdm.customers.postcode] AS [gcdm.customers.postcode], 
+						[gcdm.customers.region] AS [gcdm.customers.region]
+					FROM [gcdm.customers] 
+					WHERE (country = 'AU') and (DATE(last_ia_timestamp) > DATE(\'{d0}\')) and (DATE(last_ia_timestamp) < DATE(\'{d1}\'))
+			"""
+
+			self._run_query(q)
+
+			print(f'got customers from between {d0} and {d1}...')
 
 		return self
 
 
-
 if __name__ == '__main__':
 
-	g = Grabber().sign_in().navigate_to_table()
+	g = Grabber().sign_in().run_question()
