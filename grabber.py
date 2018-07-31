@@ -6,6 +6,8 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
+import calendar
+
 import time
 
 import json
@@ -17,17 +19,13 @@ class Grabber:
 
 		# enable Allow Remote Automation in Develop menu in Safari
 		self.driver = webdriver.Chrome('webdriver/chromedriver') #
-
 		self.creds = json.load(open('creds/cdm.json'))
-
 		self.BASE_URL = self.creds['base_url']
 
 	def click_and_wait(self, element, secs=6):
 
 		element.click()
-
 		time.sleep(secs)
-
 
 	def sign_in(self):
 
@@ -74,6 +72,8 @@ class Grabber:
 
 	def navigate_to_table(self):
 
+		print('starting new question...')
+
 		new_question = self.driver.find_element_by_css_selector('a.NavNewQuestion')
 		self.click_and_wait(new_question)
 
@@ -118,11 +118,8 @@ class Grabber:
 
 		textfield = self.driver.find_element_by_css_selector('div.ace_text-layer')
 
-		actions.moveToElement(textfield);
-		actions.click();
-		time.sleep(3)
-
-		
+		actions.move_to_element(textfield)
+		actions.click()
 		# print('got textfield ', textfield)
 
 
@@ -193,13 +190,23 @@ class Grabber:
 			"""
 
 		# textfield.send_keys(q)
-		actions.sendKeys(q);
-		actions.build().perform();
+		
+		actions.send_keys(q)
+		actions.perform()
+
+		print('done action')
 
 		time.sleep(6)
 
+		print('trying to find get answer button..')
 		get_answer_button = self.driver.find_element_by_css_selector('button.RunButton')
 		self.click_and_wait(get_answer_button, secs=10)
+
+		try:
+			row_count = self.driver.find_element_by_css_selector('div.ShownRowCount').text.strip()
+			print(row_count)
+		except:
+			print('cannot find row count!')
 
 		download_full_results = self.driver.find_element_by_css_selector('svg.Icon-downarrow')
 		self.click_and_wait(download_full_results)
@@ -209,12 +216,38 @@ class Grabber:
 		except:
 			print('cant find popover body!')
 
-		try:
-			choose_csv = self.driver.find_element_by_xpath('/html/body/span[11]/span/div/div/div/form[1]/button')
-		except:
-			print('cant choose CSV button!')
+		print('looking for the download as CSV button...')
 
-		self.click_and_wait(choose_csv)
+		for b in self.driver.find_elements_by_css_selector('button.Button'):
+
+			if b.text.strip().lower() == 'csv':
+				print('found it! clicking..')
+				self.click_and_wait(b)
+				break
+
+		print('resetting actions...')
+		actions.reset_actions()
+		print('done')
+		
+		try:
+			ac = self.driver.find_element_by_css_selector('div.ace_content')
+			print('found ac!')
+			ac.clear()
+		except:
+			print('could not find and clear ac')
+
+		try:
+			ac = self.driver.find_element_by_css_selector('textarea.ace_text-input')
+			# ac = self.driver.find_element_by_css_selector('div.ace_marker-layer')
+			print('textarea!')
+			print('trying to send keys to editor..')
+			ac.send_keys(Keys.CONTROL + 'a')
+			print('send ctrl + a')
+			ac.send_keys(Keys.DELETE)
+		except:
+			print('could not find and clear ac editor')
+
+
 
 		return self
 
