@@ -17,10 +17,15 @@ class Grabber:
 
 	def __init__(self):
 
-		# enable Allow Remote Automation in Develop menu in Safari
+		# IMPORTANT: enable Allow Remote Automation in Develop menu in Safari if using Safari
+
 		self.driver = webdriver.Chrome('webdriver/chromedriver') #
 		self.creds = json.load(open('creds/cdm.json'))
 		self.BASE_URL = self.creds['base_url']
+		self.NEW_QUESTION_URL = 'https://metabase-test.seao-cdm.com/question/new'
+		self.WINDOW_SIZE = (1400, 1000)
+
+		self.rows_per_week = []
 
 	def click_and_wait(self, element, secs=6):
 
@@ -28,7 +33,9 @@ class Grabber:
 		time.sleep(secs)
 
 	def _find_by_text(self, tag_, class_, text_):
-
+		"""
+		find an element by text
+		"""
 		for _ in self.driver.find_elements_by_css_selector(f'{tag_}.{class_}'):
 			if _.text.strip().lower() == text_:
 				return _
@@ -41,7 +48,7 @@ class Grabber:
 
 		time.sleep(3)
 
-		self.driver.set_window_size(1400, 1000)
+		self.driver.set_window_size(*self.WINDOW_SIZE)
 
 		time.sleep(3)
 
@@ -80,11 +87,9 @@ class Grabber:
 		click on the popover and choose database on the New question page
 		"""
 
-		select_database = self._find_by_text('span', 'text-grey-4', 'select a database')
-		self.click_and_wait(select_database, secs=3)
+		self.click_and_wait(self._find_by_text('span', 'text-grey-4', 'select a database'), secs=3)
 
-		database_name = self._find_by_text('h4', 'List-item-title', db_name)
-		self.click_and_wait(database_name, secs=3)
+		self.click_and_wait(self._find_by_text('h4', 'List-item-title', db_name), secs=3)
 
 		return self
 
@@ -101,7 +106,7 @@ class Grabber:
 		actions.perform()
 
 		get_answer_button = self.driver.find_element_by_css_selector('button.RunButton')
-		self.click_and_wait(get_answer_button, secs=10)
+		self.click_and_wait(get_answer_button, secs=15)
 
 		row_count = 0
 
@@ -115,6 +120,8 @@ class Grabber:
 
 		print(f'got {row_count} rows')
 
+		self.rows_per_week.append(row_count)
+
 		download_full_results = self.driver.find_element_by_css_selector('svg.Icon-downarrow')
 		self.click_and_wait(download_full_results)
 
@@ -123,55 +130,61 @@ class Grabber:
 
 		return self
 
-	def run_question(self):
+	def run_question(self, yr, mnth=None):
 
-		# new_question = self._find_by_text('a', 'NavNewQuestion', 'new question')
-		# self.click_and_wait(new_question)
+		
+		if not mnth:
+			months = range(1,13)
+		else:
+			months = range(mnth, mnth + 1)
 
-		self.driver.get('https://metabase-test.seao-cdm.com/question/new')
+		for m in months:
 
-		time.sleep(5)
+			print(self.rows_per_week)
 
-		native_query = self._find_by_text('h2', 'transition-all', 'native query')
-		self.click_and_wait(native_query)
+			for i, wk in enumerate(calendar.monthcalendar(yr,m), 1):
 
-		self._choose_database('gcdm')
+				print(f'year {yr} month {m} week {i}...')
 
-		# [[1, 2, 3, 4, 5, 6, 7], 
-		#  [8, 9, 10, 11, 12, 13, 14], 
-		#  [15, 16, 17, 18, 19, 20, 21], 
-		#  [22, 23, 24, 25, 26, 27, 28], 
-		#  [29, 30, 31, 0, 0, 0, 0]]
+				# keep non-zero days only
+				wk_ = [_ for _ in wk if _ > 0]
+				
+				d0 = arrow.get(f'{yr}-{m:02d}-{min(wk_):02d}').shift(days=-1).format('YYYY-MM-DD')
+				d1 = arrow.get(f'{yr}-{m:02d}-{max(wk_):02d}').shift(days=+1).format('YYYY-MM-DD')
 
-		yr = 2018
-		mnth = 1
+				q = f"""
+						SELECT [gcdm.customers.id] AS [gcdm.customers.id], 
+							[gcdm.customers.city] AS [gcdm.customers.city], 
+							[gcdm.customers.country] AS [gcdm.customers.country], 
+							[gcdm.customers.date_of_birth] AS [gcdm.customers.date_of_birth], 
+							[gcdm.customers.gender] AS [gcdm.customers.gender], 
+							[gcdm.customers.language] AS [gcdm.customers.language], 
+							[gcdm.customers.last_ia_timestamp] AS [gcdm.customers.last_ia_timestamp], 
+							[gcdm.customers.postcode] AS [gcdm.customers.postcode], 
+							[gcdm.customers.region] AS [gcdm.customers.region]
+						FROM [gcdm.customers] 
+						WHERE (country = 'AU') and (DATE(last_ia_timestamp) > DATE(\'{d0}\')) and (DATE(last_ia_timestamp) < DATE(\'{d1}\'))
+				"""
 
-		for wk in calendar.monthcalendar(yr,mnth):
+				self.driver.get(self.NEW_QUESTION_URL)
 			
-			d0, d1 = arrow.get(f'{yr}-{mnth}-{min(wk)}').shift(days=-1).format('YYYY-MM-DD'), \
-							arrow.get(f'{yr}-{mnth}-{max(wk)}').shift(days=+1).format('YYYY-MM-DD')
-
-			q = f"""
-					SELECT [gcdm.customers.id] AS [gcdm.customers.id], 
-						[gcdm.customers.city] AS [gcdm.customers.city], 
-						[gcdm.customers.country] AS [gcdm.customers.country], 
-						[gcdm.customers.date_of_birth] AS [gcdm.customers.date_of_birth], 
-						[gcdm.customers.gender] AS [gcdm.customers.gender], 
-						[gcdm.customers.language] AS [gcdm.customers.language], 
-						[gcdm.customers.last_ia_timestamp] AS [gcdm.customers.last_ia_timestamp], 
-						[gcdm.customers.postcode] AS [gcdm.customers.postcode], 
-						[gcdm.customers.region] AS [gcdm.customers.region]
-					FROM [gcdm.customers] 
-					WHERE (country = 'AU') and (DATE(last_ia_timestamp) > DATE(\'{d0}\')) and (DATE(last_ia_timestamp) < DATE(\'{d1}\'))
-			"""
-
-			self._run_query(q)
-
-			print(f'got customers from between {d0} and {d1}...')
-
+				time.sleep(5)
+			
+				if self.driver.current_url != self.NEW_QUESTION_URL:
+					self.driver.get(self.NEW_QUESTION_URL)
+					time.sleep(5)
+			
+				native_query = self._find_by_text('h2', 'transition-all', 'native query')
+				self.click_and_wait(native_query)
+			
+				self._choose_database('gcdm')
+				self._run_query(q)
+	
 		return self
 
 
 if __name__ == '__main__':
 
-	g = Grabber().sign_in().run_question()
+	g = Grabber() \
+			.sign_in() \
+			.run_question(2017)
