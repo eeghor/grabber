@@ -36,6 +36,14 @@ class Grabber:
 		"""
 		find an element by text
 		"""
+		print(f'searching for {tag_}')
+
+		wait = WebDriverWait(self.driver, 60)
+		elements = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, class_)))
+
+
+		print(len(elements))
+
 		for _ in self.driver.find_elements_by_css_selector(f'{tag_}.{class_}'):
 			if _.text.strip().lower() == text_:
 				return _
@@ -87,10 +95,18 @@ class Grabber:
 		click on the popover and choose database on the New question page
 		"""
 
-		self.click_and_wait(self._find_by_text('span', 'text-grey-4', 'select a database'), secs=3)
+		saved_current_url = self.driver.current_url
 
-		self.click_and_wait(self._find_by_text('h4', 'List-item-title', db_name), secs=3)
+		while 1:
 
+			try:
+				self.click_and_wait(self._find_by_text('span', 'text-grey-4', 'select a database'), secs=8)
+				self.click_and_wait(self._find_by_text('h4', 'List-item-title', db_name), secs=3)
+				break
+			except:
+				self.driver.get(saved_current_url)
+				time.sleep(5)
+				
 		return self
 
 	def _run_query(self, q):
