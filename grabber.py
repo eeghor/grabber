@@ -29,8 +29,7 @@ class Grabber:
 
 	def click_and_wait(self, element, secs=6):
 
-		self.driver.execute_script("arguments[0].click();", element)
-		# element.click()
+		element.click()
 		time.sleep(secs)
 
 	def _find_by_text(self, tag_, class_, text_):
@@ -65,9 +64,12 @@ class Grabber:
 
 		time.sleep(2)
 
-		next_button = self.driver.find_element_by_xpath('//*[@id="identifierNext"]/content/span')
+		# next_button = self.driver.find_element_by_xpath('//*[@id="identifierNext"]/content/span')
 
-		self.click_and_wait(next_button)
+		next_button = WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="identifierNext"]/content/span'))).click()
+		time.sleep(6)
+
+		# self.click_and_wait(next_button)
 
 		self.driver.find_element_by_xpath('//input[@type="password"]').send_keys(self.creds['password'])
 
