@@ -29,7 +29,8 @@ class Grabber:
 
 	def click_and_wait(self, element, secs=6):
 
-		element.click()
+		self.driver.execute_script("arguments[0].click();", element)
+		# element.click()
 		time.sleep(secs)
 
 	def _find_by_text(self, tag_, class_, text_):
@@ -106,7 +107,7 @@ class Grabber:
 			except:
 				self.driver.get(saved_current_url)
 				time.sleep(5)
-				
+
 		return self
 
 	def _run_query(self, q):
@@ -165,6 +166,7 @@ class Grabber:
 				# keep non-zero days only
 				wk_ = [_ for _ in wk if _ > 0]
 				
+
 				d0 = arrow.get(f'{yr}-{m:02d}-{min(wk_):02d}').shift(days=-1).format('YYYY-MM-DD')
 				d1 = arrow.get(f'{yr}-{m:02d}-{max(wk_):02d}').shift(days=+1).format('YYYY-MM-DD')
 
